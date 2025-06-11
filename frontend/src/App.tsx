@@ -50,6 +50,7 @@ function App() {
 
   const handleLanguageChange = (e: any) => {
     setSelectedLanguage(e.target.value);
+    setSpecifications('');
     setDockerfile('');
     setExplanation('');
     setShowExplanation(false);
