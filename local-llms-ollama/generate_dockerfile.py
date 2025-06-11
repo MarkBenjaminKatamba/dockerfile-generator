@@ -18,7 +18,7 @@ app.add_middleware(
 def build_dockerfile_prompt(language: str, specifications: Optional[str] = None) -> str:
     base = (
         """
-ONLY Generate an ideal Dockerfile for {language} with best practices. Do not provide any descriptions.
+ONLY Generate an ideal Dockerfile for {language} with best practices. DO NOT provide any descriptions.
 Include:
 - Base image
 - Installing dependencies
