@@ -15,7 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DOCKERFILE_PROMPT = """
+def build_dockerfile_prompt(language: str, specifications: Optional[str] = None) -> str:
+    base = (
+        """
 ONLY Generate an ideal Dockerfile for {language} with best practices. Do not provide any descriptions.
 Include:
 - Base image
@@ -23,8 +25,11 @@ Include:
 - Setting working directory
 - Adding source code
 - Running the application
-{specifications}
-"""
+""".format(language=language)
+    )
+    if specifications and specifications.strip():
+        base += f"\nIn addition, the Dockerfile should satisfy these user specifications: {specifications.strip()}"
+    return base
 
 EXPLANATION_PROMPT = """
 Please provide a comprehensive explanation of the following Dockerfile, including:
@@ -46,8 +51,7 @@ class DockerfileResponse(BaseModel):
     explanation: Optional[str] = None
 
 def generate_dockerfile(language: str, specifications: Optional[str] = None) -> str:
-    spec_text = f"\nAdditional specifications: {specifications}" if specifications else ""
-    prompt = DOCKERFILE_PROMPT.format(language=language, specifications=spec_text)
+    prompt = build_dockerfile_prompt(language, specifications)
     response = ollama.chat(model='llama3.2:3b', messages=[{'role': 'user', 'content': prompt}])
     return response['message']['content']
 
