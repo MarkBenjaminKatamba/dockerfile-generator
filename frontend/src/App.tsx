@@ -13,6 +13,8 @@ import {
   Snackbar,
   Alert,
   TextField,
+  CircularProgress,
+  Backdrop,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import axios from 'axios';
@@ -37,8 +39,19 @@ function App() {
   const [explanation, setExplanation] = useState('');
   const [showExplanation, setShowExplanation] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+
+  const handleLanguageChange = (e: any) => {
+    setSelectedLanguage(e.target.value);
+    setDockerfile('');
+    setExplanation('');
+    setShowExplanation(false);
+  };
 
   const handleGenerate = async () => {
+    setLoading(true);
+    setLoadingMessage('Generating Dockerfile...');
     try {
       const response = await axios.post('/api/generate', { language: selectedLanguage, specifications });
       setDockerfile(response.data.dockerfile);
@@ -46,16 +59,24 @@ function App() {
       setShowExplanation(false);
     } catch (error) {
       setSnackbar({ open: true, message: 'Error generating Dockerfile' });
+    } finally {
+      setLoading(false);
+      setLoadingMessage('');
     }
   };
 
   const handleExplain = async () => {
+    setLoading(true);
+    setLoadingMessage('Generating Explanation...');
     try {
       const response = await axios.post('/api/explain', { language: selectedLanguage, specifications });
       setExplanation(response.data.explanation);
       setShowExplanation(true);
     } catch (error) {
       setSnackbar({ open: true, message: 'Error generating explanation' });
+    } finally {
+      setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -76,7 +97,7 @@ function App() {
           <Select
             value={selectedLanguage}
             label="Programming Language"
-            onChange={(e) => setSelectedLanguage(e.target.value)}
+            onChange={handleLanguageChange}
           >
             {languages.map((lang) => (
               <MenuItem key={lang} value={lang}>
@@ -169,6 +190,13 @@ function App() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Backdrop open={loading} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <CircularProgress color="inherit" />
+          <Typography variant="h6" sx={{ mt: 2 }}>{loadingMessage}</Typography>
+        </Box>
+      </Backdrop>
     </Container>
   );
 }
