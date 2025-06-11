@@ -32,13 +32,19 @@ const languages = [
   'TypeScript',
 ];
 
+type SnackbarState = {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+};
+
 function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [specifications, setSpecifications] = useState('');
   const [dockerfile, setDockerfile] = useState('');
   const [explanation, setExplanation] = useState('');
   const [showExplanation, setShowExplanation] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
 
@@ -58,7 +64,7 @@ function App() {
       setExplanation('');
       setShowExplanation(false);
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error generating Dockerfile' });
+      setSnackbar({ open: true, message: 'Error generating Dockerfile', severity: 'error' });
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -73,7 +79,7 @@ function App() {
       setExplanation(response.data.explanation);
       setShowExplanation(true);
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error generating explanation' });
+      setSnackbar({ open: true, message: 'Error generating explanation', severity: 'error' });
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -82,7 +88,7 @@ function App() {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(dockerfile);
-    setSnackbar({ open: true, message: 'Dockerfile copied to clipboard!' });
+    setSnackbar({ open: true, message: 'Dockerfile copied to clipboard!', severity: 'success' });
   };
 
   return (
@@ -186,7 +192,7 @@ function App() {
         autoHideDuration={3000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert severity="success" onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
           {snackbar.message}
         </Alert>
       </Snackbar>
