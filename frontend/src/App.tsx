@@ -1,0 +1,176 @@
+import { useState } from 'react';
+import {
+  Container,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  Paper,
+  Typography,
+  IconButton,
+  Snackbar,
+  Alert,
+  TextField,
+} from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import axios from 'axios';
+
+const languages = [
+  'Python',
+  'Node.js',
+  'Java',
+  'Go',
+  'Ruby',
+  'PHP',
+  'Rust',
+  'C#',
+  'C++',
+  'TypeScript',
+];
+
+function App() {
+  const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [specifications, setSpecifications] = useState('');
+  const [dockerfile, setDockerfile] = useState('');
+  const [explanation, setExplanation] = useState('');
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+
+  const handleGenerate = async () => {
+    try {
+      const response = await axios.post('/api/generate', { language: selectedLanguage, specifications });
+      setDockerfile(response.data.dockerfile);
+      setExplanation('');
+      setShowExplanation(false);
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error generating Dockerfile' });
+    }
+  };
+
+  const handleExplain = async () => {
+    try {
+      const response = await axios.post('/api/explain', { language: selectedLanguage, specifications });
+      setExplanation(response.data.explanation);
+      setShowExplanation(true);
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error generating explanation' });
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(dockerfile);
+    setSnackbar({ open: true, message: 'Dockerfile copied to clipboard!' });
+  };
+
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom align="center">
+        Dockerfile Generator
+      </Typography>
+      
+      <Box sx={{ mb: 4 }}>
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Programming Language</InputLabel>
+          <Select
+            value={selectedLanguage}
+            label="Programming Language"
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+          >
+            {languages.map((lang) => (
+              <MenuItem key={lang} value={lang}>
+                {lang}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="Additional Specifications (optional)"
+          placeholder="E.g., Use Python 3.11, multi-stage build, etc."
+          value={specifications}
+          onChange={(e) => {
+            if (e.target.value.length <= 200) setSpecifications(e.target.value);
+          }}
+          fullWidth
+          multiline
+          inputProps={{ maxLength: 200 }}
+          sx={{ mb: 2 }}
+          helperText={`${specifications.length}/200 characters`}
+        />
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleGenerate}
+            disabled={!selectedLanguage}
+            fullWidth
+          >
+            Generate Dockerfile
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleExplain}
+            disabled={!dockerfile}
+            fullWidth
+          >
+            Explain
+          </Button>
+        </Box>
+      </Box>
+
+      {dockerfile && (
+        <Paper sx={{ p: 2, mb: 2, position: 'relative' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6">
+              {`Generated ${selectedLanguage} Dockerfile:`}
+            </Typography>
+            <IconButton onClick={handleCopy} size="small">
+              <ContentCopyIcon />
+            </IconButton>
+          </Box>
+          <Box
+            component="pre"
+            sx={{
+              p: 2,
+              bgcolor: 'grey.100',
+              borderRadius: 1,
+              overflowX: 'auto',
+              fontFamily: 'monospace',
+            }}
+          >
+            {dockerfile}
+          </Box>
+        </Paper>
+      )}
+
+      {showExplanation && explanation && (
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Explanation
+          </Typography>
+          <Typography
+            component="div"
+            sx={{
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'inherit',
+            }}
+          >
+            {explanation}
+          </Typography>
+        </Paper>
+      )}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity="success" onClose={() => setSnackbar({ ...snackbar, open: false })}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+}
+
+export default App; 
