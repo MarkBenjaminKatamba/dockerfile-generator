@@ -22,8 +22,7 @@
 11. [Troubleshooting](#troubleshooting)
 12. [Prompt Engineering Note](#prompt)
 13. [Disclaimer & Attribution](#disclaimer)
-14. [License](#license)
-15. [Credits](#credits)
+14. [Credits](#credits)
 
 ---
 
@@ -365,11 +364,10 @@ The frontend design, user experience, and all enhancements—including the full-
 > **Disclaimer:**  
 > This project is an independent implementation and extension of the ideas demonstrated in the referenced course. It is not affiliated with or endorsed by Abhishek Veeramalla. All frontend design, UX, and additional backend logic are original work.
 
----
 
-## 14. License <a name="license"></a>
 
-Specify your license here (e.g., MIT, Apache 2.0, etc.).
+
+
 
 ---
 
