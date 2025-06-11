@@ -35,7 +35,7 @@ jobs:
           context: ./local-llms-ollama
           file: ./local-llms-ollama/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/dockerfile-backend:${{ github.ref_name }}
+          tags: ghcr.io/markbenjaminkatamba/dockerfile-backend:${{ github.ref_name }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -43,4 +43,4 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/dockerfile-frontend:${{ github.ref_name }} 
+          tags: ghcr.io/markbenjaminkatamba/dockerfile-frontend:${{ github.ref_name }} 
