@@ -118,13 +118,13 @@ function App() {
           placeholder="E.g., Use Python 3.11, multi-stage build, etc."
           value={specifications}
           onChange={(e) => {
-            if (e.target.value.length <= 500) setSpecifications(e.target.value);
+            if (e.target.value.length <= 2000) setSpecifications(e.target.value);
           }}
           fullWidth
           multiline
-          inputProps={{ maxLength: 500 }}
+          inputProps={{ maxLength: 2000 }}
           sx={{ mb: 2 }}
-          helperText={`${specifications.length}/500 characters`}
+          helperText={`${specifications.length}/2000 characters`}
         />
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
