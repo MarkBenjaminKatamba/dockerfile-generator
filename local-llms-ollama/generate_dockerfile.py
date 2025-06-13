@@ -129,19 +129,19 @@ Include the following essential components:
     
     # Add language-specific context if available
     if language in LANGUAGE_CONTEXT:
-        base_prompt += f"
+        base_prompt += f"""
 Specific considerations for {language} applications:
 {LANGUAGE_CONTEXT[language]}
-"
+"""
 
     # Add user-provided specifications
     if specifications and specifications.strip():
-        base_prompt += f"
+        base_prompt += f"""
 User's Additional Specifications:
 - {specifications.strip().replace('\n', '\n- ')}
-" # Format specifications as a list
+"""
 
-    base_prompt += """
+    base_prompt += f"""
 Generate ONLY the complete, executable Dockerfile content. DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the Dockerfile content itself. Ensure the Dockerfile is ready to be directly saved and built.
 """
     return base_prompt
