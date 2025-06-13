@@ -142,7 +142,7 @@ User's Additional Specifications:
 """
 
     base_prompt += f"""
-Generate ONLY the complete, executable Dockerfile content. DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the Dockerfile content itself. Ensure the Dockerfile is ready to be directly saved and built.
+You are a senior developer. Generate ONLY the complete, executable Dockerfile content. DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the Dockerfile content itself. Ensure the Dockerfile is ready to be directly saved and built.
 """
     return base_prompt
 
