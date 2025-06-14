@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import {
   Container,
   Box,
@@ -17,7 +17,10 @@ import {
   Backdrop,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon
+import Brightness7Icon from '@mui/icons-material/Brightness7'; // Sun icon
 import axios from 'axios';
+import { ColorModeContext } from './main'; // Import the context
 
 const languages = [
   'Python',
@@ -41,6 +44,7 @@ type SnackbarState = {
 function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [specifications, setSpecifications] = useState('');
+  const [repoUrl, setRepoUrl] = useState(''); // New state for repo URL
   const [dockerfile, setDockerfile] = useState('');
   const [explanation, setExplanation] = useState('');
   const [showExplanation, setShowExplanation] = useState(false);
@@ -48,8 +52,13 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
 
+  const theme = useTheme(); // Access the current theme for mode
+  const colorMode = useContext(ColorModeContext); // Access toggle function
+
   const handleLanguageChange = (e: any) => {
     setSelectedLanguage(e.target.value);
+    setSpecifications('');
+    setRepoUrl(''); // Clear repo URL on language change
     setDockerfile('');
     setExplanation('');
     setShowExplanation(false);
@@ -59,7 +68,7 @@ function App() {
     setLoading(true);
     setLoadingMessage('Generating Dockerfile...');
     try {
-      const response = await axios.post('/api/generate', { language: selectedLanguage, specifications });
+      const response = await axios.post('/api/generate', { language: selectedLanguage, specifications, repo_url: repoUrl });
       setDockerfile(response.data.dockerfile);
       setExplanation('');
       setShowExplanation(false);
@@ -75,7 +84,7 @@ function App() {
     setLoading(true);
     setLoadingMessage('Generating Explanation...');
     try {
-      const response = await axios.post('/api/explain', { language: selectedLanguage, specifications });
+      const response = await axios.post('/api/explain', { language: selectedLanguage, specifications, repo_url: repoUrl });
       setExplanation(response.data.explanation);
       setShowExplanation(true);
     } catch (error) {
@@ -92,13 +101,18 @@ function App() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center">
+    <Container maxWidth="md" sx={{ py: 6, bgcolor: 'background.default', borderRadius: '12px', position: 'relative' }}>
+      <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+        <IconButton onClick={colorMode.toggleColorMode} color="inherit">
+          {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+        </IconButton>
+      </Box>
+      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
         Dockerfile Generator
       </Typography>
       
-      <Box sx={{ mb: 4 }}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
+      <Paper sx={{ p: 4, mb: 4 }}>
+        <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel>Programming Language</InputLabel>
           <Select
             value={selectedLanguage}
@@ -121,9 +135,19 @@ function App() {
           }}
           fullWidth
           multiline
-          inputProps={{ maxLength: 200 }}
-          sx={{ mb: 2 }}
-          helperText={`${specifications.length}/200 characters`}
+          rows={3}
+          inputProps={{ maxLength: 2000 }}
+          sx={{ mb: 3 }}
+          helperText={`${specifications.length}/2000 characters`}
+        />
+        <TextField
+          label="GitHub Repository URL (optional)"
+          placeholder="E.g., https://github.com/owner/repo"
+          value={repoUrl}
+          onChange={(e) => setRepoUrl(e.target.value)}
+          fullWidth
+          sx={{ mb: 3 }}
+          helperText="Provide a link to your GitHub repository for more precise Dockerfile generation."
         />
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -143,11 +167,11 @@ function App() {
             Explain
           </Button>
         </Box>
-      </Box>
+      </Paper>
 
       {dockerfile && (
-        <Paper sx={{ p: 2, mb: 2, position: 'relative' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Paper sx={{ p: 4, mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
               {`Generated ${selectedLanguage} Dockerfile:`}
             </Typography>
@@ -163,6 +187,9 @@ function App() {
               borderRadius: 1,
               overflowX: 'auto',
               fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              maxHeight: '400px',
             }}
           >
             {dockerfile}
@@ -171,8 +198,8 @@ function App() {
       )}
 
       {showExplanation && explanation && (
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
+        <Paper sx={{ p: 4 }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
             Explanation
           </Typography>
           <Typography
@@ -180,6 +207,11 @@ function App() {
             sx={{
               whiteSpace: 'pre-wrap',
               fontFamily: 'inherit',
+              maxHeight: '600px',
+              overflowY: 'auto',
+              p: 1,
+              bgcolor: 'grey.50',
+              borderRadius: '8px',
             }}
           >
             {explanation}

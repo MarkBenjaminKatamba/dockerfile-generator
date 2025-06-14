@@ -45,13 +45,19 @@ Dockerfile:
 class LanguageRequest(BaseModel):
     language: str
     specifications: Optional[str] = None
+    repo_url: Optional[str] = None # Added for GitHub repo URL
 
 class DockerfileResponse(BaseModel):
     dockerfile: str
     explanation: Optional[str] = None
 
-def generate_dockerfile(language: str, specifications: Optional[str] = None) -> str:
-    prompt = build_dockerfile_prompt(language, specifications)
+def generate_dockerfile(language: str, specifications: Optional[str] = None, repo_url: Optional[str] = None) -> str:
+    # Placeholder for GitHub repo analysis (User to implement)
+    repo_info = None
+    # if repo_url: 
+    #    repo_info = your_function_to_analyze_github_repo(repo_url)
+    
+    prompt = build_dockerfile_prompt(language, specifications, repo_info)
     response = ollama.chat(model='llama3.2:3b', messages=[{'role': 'user', 'content': prompt}])
     return response['message']['content']
 
@@ -61,12 +67,15 @@ def generate_explanation(dockerfile: str) -> str:
 
 @app.post("/api/generate", response_model=DockerfileResponse)
 async def generate(request: LanguageRequest):
-    dockerfile = generate_dockerfile(request.language, request.specifications)
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url)
     return DockerfileResponse(dockerfile=dockerfile)
 
 @app.post("/api/explain", response_model=DockerfileResponse)
 async def explain(request: LanguageRequest):
-    dockerfile = generate_dockerfile(request.language, request.specifications)
+    # The explanation prompt only needs the Dockerfile string.
+    # The generate_dockerfile function is called here to ensure we have a Dockerfile to explain,
+    # which also implies that repo_url and specifications are implicitly used to *generate* that Dockerfile.
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url)
     explanation = generate_explanation(dockerfile)
     return DockerfileResponse(dockerfile=dockerfile, explanation=explanation)
 
