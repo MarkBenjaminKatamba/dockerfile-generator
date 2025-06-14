@@ -110,7 +110,7 @@ def build_dockerfile_prompt(language: str, specifications: Optional[str] = None)
 Generate a PRODUCTION-READY Dockerfile for a {language} application.
 The Dockerfile must adhere to the following principles for robust production deployment:
 - **Security**: Use minimal base images, run as a non-root user when possible, and ensure only necessary components are included.
-- **Efficiency**: Leverage multi-stage builds, optimize caching for faster rebuilds, and keep the final image size as small as possible.
+- **Efficiency**: Leverage multi-stage builds when appropriate, optimize caching for faster rebuilds, and keep the final image size as small as possible.
 - **Reliability**: Include necessary environment configurations, and consider health checks if applicable.
 - **Maintainability**: Structure the Dockerfile logically, use clear comments for complex steps.
 
