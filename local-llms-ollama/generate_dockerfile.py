@@ -222,14 +222,14 @@ def generate_dockerfile(
     #    repo_info = your_function_to_analyze_github_repo(repo_url)
     
     prompt = build_dockerfile_prompt(language, specifications, repo_info, include_comments)
-    response = ollama.chat(model='llama3.2:3b', messages=[{'role': 'user', 'content': prompt}])
+    response = ollama.chat(model='deepseek-r1:1.5b', messages=[{'role': 'user', 'content': prompt}])
     return response['message']['content']
 
 def generate_explanation(dockerfile: str) -> str:
     # For explanation, we don't need language or specifications as the Dockerfile itself is the source.
     # However, if you want the explanation to be context-aware of the original request, you could pass them.
     # For now, it's strictly about the Dockerfile content.
-    response = ollama.chat(model='llama3.2:3b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
+    response = ollama.chat(model='deepseek-r1:1.5b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
     return response['message']['content'].strip() # Ensure no extra whitespace/markdown
 
 @app.post("/api/generate", response_model=DockerfileResponse)
