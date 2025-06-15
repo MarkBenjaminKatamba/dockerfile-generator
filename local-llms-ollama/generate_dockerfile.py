@@ -99,7 +99,8 @@ LANGUAGE_SPECIFIC_CONTEXT = {
 def build_dockerfile_prompt(
     language: str,
     specifications: Optional[str] = None,
-    repo_info: Optional[dict] = None # New parameter to pass extracted repo info
+    repo_info: Optional[dict] = None,
+    include_comments: Optional[bool] = None
 ) -> str:
     # Initialize prompt sections
     role = "You are a world-class DevOps engineer and a Dockerfile expert."
@@ -111,8 +112,11 @@ def build_dockerfile_prompt(
     instructions_sections = [
         "Generate ONLY the complete, executable Dockerfile content.",
         "DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the Dockerfile content itself.",
-        "Ensure the Dockerfile is ready to be directly saved and built."
+        "Ensure the Dockerfile is ready to be directly saved and built.",
     ]
+    if include_comments:
+        instructions_sections.append("Include relevant comments for each step in the Dockerfile to enhance readability and explain the purpose of each instruction.")
+
     notes_sections = []
 
     # Add language-specific context if available
@@ -200,6 +204,7 @@ class LanguageRequest(BaseModel):
     language: str
     specifications: Optional[str] = None
     repo_url: Optional[str] = None # Added for GitHub repo URL
+    include_comments: Optional[bool] = None # New field for optional comments
 
 class DockerfileResponse(BaseModel):
     dockerfile: str
@@ -211,7 +216,7 @@ def generate_dockerfile(language: str, specifications: Optional[str] = None, rep
     # if repo_url: 
     #    repo_info = your_function_to_analyze_github_repo(repo_url)
     
-    prompt = build_dockerfile_prompt(language, specifications, repo_info)
+    prompt = build_dockerfile_prompt(language, specifications, repo_info, include_comments)
     response = ollama.chat(model='llama3.2:3b', messages=[{'role': 'user', 'content': prompt}])
     return response['message']['content']
 
@@ -224,7 +229,7 @@ def generate_explanation(dockerfile: str) -> str:
 
 @app.post("/api/generate", response_model=DockerfileResponse)
 async def generate(request: LanguageRequest):
-    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url)
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url, request.include_comments)
     return DockerfileResponse(dockerfile=dockerfile)
 
 @app.post("/api/explain", response_model=DockerfileResponse)
@@ -232,7 +237,7 @@ async def explain(request: LanguageRequest):
     # The explanation prompt only needs the Dockerfile string.
     # The generate_dockerfile function is called here to ensure we have a Dockerfile to explain,
     # which also implies that repo_url and specifications are implicitly used to *generate* that Dockerfile.
-    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url)
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url, request.include_comments)
     explanation = generate_explanation(dockerfile)
     return DockerfileResponse(dockerfile=dockerfile, explanation=explanation)
 

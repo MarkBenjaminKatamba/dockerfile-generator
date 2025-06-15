@@ -16,6 +16,8 @@ import {
   CircularProgress,
   Backdrop,
   useTheme,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon
@@ -52,6 +54,7 @@ function App() {
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [includeComments, setIncludeComments] = useState(true); // New state for comments, default to true
 
   const theme = useTheme(); // Access the current theme for mode
   const colorMode = useContext(ColorModeContext); // Access toggle function
@@ -63,13 +66,19 @@ function App() {
     setDockerfile('');
     setExplanation('');
     setShowExplanation(false);
+    setIncludeComments(true); // Reset comments checkbox to default on language change
   };
 
   const handleGenerate = async () => {
     setLoading(true);
     setLoadingMessage('Generating Dockerfile...');
     try {
-      const response = await axios.post('/api/generate', { language: selectedLanguage, specifications, repo_url: repoUrl });
+      const response = await axios.post('/api/generate', { 
+        language: selectedLanguage, 
+        specifications, 
+        repo_url: repoUrl, 
+        include_comments: includeComments // Pass includeComments
+      });
       setDockerfile(response.data.dockerfile);
       setExplanation('');
       setShowExplanation(false);
@@ -85,7 +94,12 @@ function App() {
     setLoading(true);
     setLoadingMessage('Generating Explanation...');
     try {
-      const response = await axios.post('/api/explain', { language: selectedLanguage, specifications, repo_url: repoUrl });
+      const response = await axios.post('/api/explain', {
+        language: selectedLanguage,
+        specifications,
+        repo_url: repoUrl,
+        include_comments: includeComments // Pass includeComments
+      });
       setExplanation(response.data.explanation);
       setShowExplanation(true);
     } catch (error) {
@@ -149,6 +163,11 @@ function App() {
           fullWidth
           sx={{ mb: 3 }}
           helperText="Provide a link to your GitHub repository for more precise Dockerfile generation."
+        />
+        <FormControlLabel
+          control={<Checkbox checked={includeComments} onChange={(e) => setIncludeComments(e.target.checked)} />}
+          label="Include Comments in Dockerfile"
+          sx={{ mb: 3 }}
         />
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
