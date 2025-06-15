@@ -7,10 +7,16 @@ import {
   useMediaQuery,
   PaletteMode,
   IconButton,
+  useTheme,
 } from '@mui/material'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 import App from './App'
+
+export const ColorModeContext = React.createContext({
+  toggleColorMode: () => {
+  },
+});
 
 function AppWrapper() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -168,12 +174,12 @@ function AppWrapper() {
   );
 
   return (
-    <colorMode.Provider value={colorMode}>
+    <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <App />
       </ThemeProvider>
-    </colorMode.Provider>
+    </ColorModeContext.Provider>
   );
 }
 

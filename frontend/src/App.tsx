@@ -15,6 +15,7 @@ import {
   TextField,
   CircularProgress,
   Backdrop,
+  useTheme,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon
@@ -131,7 +132,7 @@ function App() {
           placeholder="E.g., Use Python 3.11, multi-stage build, etc."
           value={specifications}
           onChange={(e) => {
-            if (e.target.value.length <= 200) setSpecifications(e.target.value);
+            if (e.target.value.length <= 2000) setSpecifications(e.target.value);
           }}
           fullWidth
           multiline
@@ -183,7 +184,8 @@ function App() {
             component="pre"
             sx={{
               p: 2,
-              bgcolor: 'grey.100',
+              bgcolor: 'background.paper',
+              color: 'text.primary',
               borderRadius: 1,
               overflowX: 'auto',
               fontFamily: 'monospace',
@@ -210,7 +212,8 @@ function App() {
               maxHeight: '600px',
               overflowY: 'auto',
               p: 1,
-              bgcolor: 'grey.50',
+              bgcolor: 'background.paper',
+              color: 'text.primary',
               borderRadius: '8px',
             }}
           >
