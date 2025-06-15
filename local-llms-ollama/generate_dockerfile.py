@@ -111,11 +111,11 @@ def build_dockerfile_prompt(
     ]
     instructions_sections = [
         "Generate ONLY the complete, executable Dockerfile content.",
-        "DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the Dockerfile content itself.",
+        "DO NOT include any introductory or concluding remarks or explanations outside of the Dockerfile content itself. Comments *within* the Dockerfile are permitted and encouraged when explicitly requested.",
         "Ensure the Dockerfile is ready to be directly saved and built.",
     ]
     if include_comments:
-        instructions_sections.append("Include relevant comments for each step in the Dockerfile to enhance readability and explain the purpose of each instruction.")
+        instructions_sections.append("**CRITICAL:** Include detailed and relevant comments for *every significant step* in the Dockerfile. These comments are essential for explaining the purpose and rationale behind each instruction.")
 
     notes_sections = []
 
@@ -210,7 +210,12 @@ class DockerfileResponse(BaseModel):
     dockerfile: str
     explanation: Optional[str] = None
 
-def generate_dockerfile(language: str, specifications: Optional[str] = None, repo_url: Optional[str] = None) -> str:
+def generate_dockerfile(
+    language: str,
+    specifications: Optional[str] = None,
+    repo_url: Optional[str] = None,
+    include_comments: Optional[bool] = None
+) -> str:
     # Placeholder for GitHub repo analysis (User to implement)
     repo_info = None
     # if repo_url: 

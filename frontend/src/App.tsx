@@ -54,7 +54,7 @@ function App() {
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [includeComments, setIncludeComments] = useState(true); // New state for comments, default to true
+  const [includeComments, setIncludeComments] = useState(false); // New state for comments, default to false
 
   const theme = useTheme(); // Access the current theme for mode
   const colorMode = useContext(ColorModeContext); // Access toggle function
@@ -66,7 +66,7 @@ function App() {
     setDockerfile('');
     setExplanation('');
     setShowExplanation(false);
-    setIncludeComments(true); // Reset comments checkbox to default on language change
+    setIncludeComments(false); // Reset comments checkbox to default on language change
   };
 
   const handleGenerate = async () => {
