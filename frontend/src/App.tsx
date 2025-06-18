@@ -18,6 +18,8 @@ import {
   useTheme,
   FormControlLabel,
   Checkbox,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon
@@ -46,73 +48,127 @@ type SnackbarState = {
 
 function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('');
-  const [specifications, setSpecifications] = useState('');
-  const [repoUrl, setRepoUrl] = useState(''); // New state for repo URL
+  const [tab, setTab] = useState(0); // 0: Dockerfile, 1: Workflow
+
+  // Dockerfile tab state
+  const [dfSpecs, setDfSpecs] = useState('');
+  const [dfRepoPath, setDfRepoPath] = useState('');
+  const [dfIncludeComments, setDfIncludeComments] = useState(false);
   const [dockerfile, setDockerfile] = useState('');
-  const [explanation, setExplanation] = useState('');
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [dfExplanation, setDfExplanation] = useState('');
+  const [dfShowExplanation, setDfShowExplanation] = useState(false);
+
+  // Workflow tab state
+  const [wfSpecs, setWfSpecs] = useState('');
+  const [wfRepoPath, setWfRepoPath] = useState('');
+  const [wfIncludeComments, setWfIncludeComments] = useState(false);
+  const [workflow, setWorkflow] = useState('');
+  const [wfExplanation, setWfExplanation] = useState('');
+  const [wfShowExplanation, setWfShowExplanation] = useState(false);
+
+  // Shared
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [includeComments, setIncludeComments] = useState(false); // New state for comments, default to false
 
   const theme = useTheme(); // Access the current theme for mode
   const colorMode = useContext(ColorModeContext); // Access toggle function
 
   const handleLanguageChange = (e: any) => {
     setSelectedLanguage(e.target.value);
-    setSpecifications('');
-    setRepoUrl(''); // Clear repo URL on language change
-    setDockerfile('');
-    setExplanation('');
-    setShowExplanation(false);
-    setIncludeComments(false); // Reset comments checkbox to default on language change
+    // Reset all tab states
+    setDfSpecs(''); setDfRepoPath(''); setDfIncludeComments(false); setDockerfile(''); setDfExplanation(''); setDfShowExplanation(false);
+    setWfSpecs(''); setWfRepoPath(''); setWfIncludeComments(false); setWorkflow(''); setWfExplanation(''); setWfShowExplanation(false);
   };
 
-  const handleGenerate = async () => {
+  const handleTabChange = (_: any, newValue: number) => {
+    setTab(newValue);
+  };
+
+  // Dockerfile Tab Handlers
+  const handleGenerateDockerfile = async () => {
     setLoading(true);
     setLoadingMessage('Generating Dockerfile...');
+    setDockerfile(''); setDfExplanation(''); setDfShowExplanation(false);
     try {
-      const response = await axios.post('/api/generate', { 
-        language: selectedLanguage, 
-        specifications, 
-        repo_url: repoUrl, 
-        include_comments: includeComments // Pass includeComments
+      const response = await axios.post('/api/generate', {
+        language: selectedLanguage,
+        specifications: dfSpecs,
+        repo_path: dfRepoPath,
+        include_comments: dfIncludeComments,
       });
       setDockerfile(response.data.dockerfile);
-      setExplanation('');
-      setShowExplanation(false);
     } catch (error) {
       setSnackbar({ open: true, message: 'Error generating Dockerfile', severity: 'error' });
     } finally {
-      setLoading(false);
-      setLoadingMessage('');
+      setLoading(false); setLoadingMessage('');
     }
   };
-
-  const handleExplain = async () => {
+  const handleExplainDockerfile = async () => {
     setLoading(true);
     setLoadingMessage('Generating Explanation...');
+    setDfExplanation(''); setDfShowExplanation(false);
     try {
       const response = await axios.post('/api/explain', {
         language: selectedLanguage,
-        specifications,
-        repo_url: repoUrl,
-        include_comments: includeComments // Pass includeComments
+        specifications: dfSpecs,
+        repo_path: dfRepoPath,
+        include_comments: dfIncludeComments,
       });
-      setExplanation(response.data.explanation);
-      setShowExplanation(true);
+      setDfExplanation(response.data.explanation);
+      setDfShowExplanation(true);
     } catch (error) {
       setSnackbar({ open: true, message: 'Error generating explanation', severity: 'error' });
     } finally {
-      setLoading(false);
-      setLoadingMessage('');
+      setLoading(false); setLoadingMessage('');
     }
   };
-
-  const handleCopy = () => {
+  const handleCopyDockerfile = () => {
     navigator.clipboard.writeText(dockerfile);
     setSnackbar({ open: true, message: 'Dockerfile copied to clipboard!', severity: 'success' });
+  };
+
+  // Workflow Tab Handlers
+  const handleGenerateWorkflow = async () => {
+    setLoading(true);
+    setLoadingMessage('Generating GitHub Actions Workflow...');
+    setWorkflow(''); setWfExplanation(''); setWfShowExplanation(false);
+    try {
+      const response = await axios.post('/api/generate_workflow', {
+        language: selectedLanguage,
+        specifications: wfSpecs,
+        repo_path: wfRepoPath,
+        include_comments: wfIncludeComments,
+      });
+      setWorkflow(response.data.workflow);
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error generating workflow', severity: 'error' });
+    } finally {
+      setLoading(false); setLoadingMessage('');
+    }
+  };
+  const handleExplainWorkflow = async () => {
+    setLoading(true);
+    setLoadingMessage('Generating Workflow Explanation...');
+    setWfExplanation(''); setWfShowExplanation(false);
+    try {
+      const response = await axios.post('/api/explain', {
+        language: selectedLanguage,
+        specifications: wfSpecs,
+        repo_path: wfRepoPath,
+        include_comments: wfIncludeComments,
+      });
+      setWfExplanation(response.data.explanation);
+      setWfShowExplanation(true);
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error generating workflow explanation', severity: 'error' });
+    } finally {
+      setLoading(false); setLoadingMessage('');
+    }
+  };
+  const handleCopyWorkflow = () => {
+    navigator.clipboard.writeText(workflow);
+    setSnackbar({ open: true, message: 'Workflow copied to clipboard!', severity: 'success' });
   };
 
   return (
@@ -123,7 +179,7 @@ function App() {
         </IconButton>
       </Box>
       <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-        Dockerfile Generator
+        DevOps AI Assistant – Local
       </Typography>
       
       <Paper sx={{ p: 4, mb: 4 }}>
@@ -141,105 +197,211 @@ function App() {
             ))}
           </Select>
         </FormControl>
-        <TextField
-          label="Additional Specifications (optional)"
-          placeholder="E.g., Use Python 3.11, multi-stage build, etc."
-          value={specifications}
-          onChange={(e) => {
-            if (e.target.value.length <= 2000) setSpecifications(e.target.value);
-          }}
-          fullWidth
-          multiline
-          rows={3}
-          inputProps={{ maxLength: 2000 }}
-          sx={{ mb: 3 }}
-          helperText={`${specifications.length}/2000 characters`}
-        />
-        <TextField
-          label="GitHub Repository URL (optional)"
-          placeholder="E.g., https://github.com/owner/repo"
-          value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
-          fullWidth
-          sx={{ mb: 3 }}
-          helperText="Provide a link to your GitHub repository for more precise Dockerfile generation."
-        />
-        <FormControlLabel
-          control={<Checkbox checked={includeComments} onChange={(e) => setIncludeComments(e.target.checked)} />}
-          label="Include Comments in Dockerfile"
-          sx={{ mb: 3 }}
-        />
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleGenerate}
-            disabled={!selectedLanguage}
-            fullWidth
-          >
-            Generate Dockerfile
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleExplain}
-            disabled={!dockerfile}
-            fullWidth
-          >
-            Explain
-          </Button>
-        </Box>
+        <Tabs value={tab} onChange={handleTabChange} sx={{ mb: 3 }}>
+          <Tab label="Dockerfile Generator" />
+          <Tab label="GitHub Actions Workflow Generator" />
+        </Tabs>
+        {tab === 0 && (
+          <Box>
+            <TextField
+              label="Additional Specifications (optional)"
+              placeholder="E.g., Use Python 3.11, multi-stage build, etc."
+              value={dfSpecs}
+              onChange={(e) => {
+                if (e.target.value.length <= 2000) setDfSpecs(e.target.value);
+              }}
+              fullWidth
+              multiline
+              rows={3}
+              inputProps={{ maxLength: 2000 }}
+              sx={{ mb: 3 }}
+              helperText={`${dfSpecs.length}/2000 characters`}
+            />
+            <TextField
+              label="Local Repository Path (optional)"
+              placeholder="E.g., /path/to/your/repo or C:\Users\user\repo"
+              value={dfRepoPath}
+              onChange={(e) => setDfRepoPath(e.target.value)}
+              fullWidth
+              sx={{ mb: 3 }}
+              helperText="Provide a local path to your repository for more precise Dockerfile generation."
+            />
+            <FormControlLabel
+              control={<Checkbox checked={dfIncludeComments} onChange={(e) => setDfIncludeComments(e.target.checked)} />}
+              label="Include Comments in Dockerfile"
+              sx={{ mb: 3 }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleGenerateDockerfile}
+                disabled={!selectedLanguage}
+                fullWidth
+              >
+                Generate Dockerfile
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleExplainDockerfile}
+                disabled={!dockerfile}
+                fullWidth
+              >
+                Explain
+              </Button>
+            </Box>
+            {dockerfile && (
+              <Paper sx={{ p: 4, mt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    {`Generated ${selectedLanguage} Dockerfile:`}
+                  </Typography>
+                  <IconButton onClick={handleCopyDockerfile} size="small">
+                    <ContentCopyIcon />
+                  </IconButton>
+                </Box>
+                <Box
+                  component="pre"
+                  sx={{
+                    p: 2,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    borderRadius: 1,
+                    overflowX: 'auto',
+                    fontFamily: 'monospace',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: '400px',
+                  }}
+                >
+                  {dockerfile}
+                </Box>
+              </Paper>
+            )}
+            {dfShowExplanation && dfExplanation && (
+              <Paper sx={{ p: 4, mt: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                  Explanation
+                </Typography>
+                <Typography
+                  component="div"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'inherit',
+                    maxHeight: '600px',
+                    overflowY: 'auto',
+                    p: 1,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    borderRadius: '8px',
+                  }}
+                >
+                  {dfExplanation}
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        )}
+        {tab === 1 && (
+          <Box>
+            <TextField
+              label="Additional Specifications (optional)"
+              placeholder="E.g., Use multi-stage build, push to GHCR, run tests, etc."
+              value={wfSpecs}
+              onChange={(e) => {
+                if (e.target.value.length <= 2000) setWfSpecs(e.target.value);
+              }}
+              fullWidth
+              multiline
+              rows={3}
+              inputProps={{ maxLength: 2000 }}
+              sx={{ mb: 3 }}
+              helperText={`${wfSpecs.length}/2000 characters`}
+            />
+            <TextField
+              label="Local Repository Path (optional)"
+              placeholder="E.g., /path/to/your/repo or C:\Users\user\repo"
+              value={wfRepoPath}
+              onChange={(e) => setWfRepoPath(e.target.value)}
+              fullWidth
+              sx={{ mb: 3 }}
+              helperText="Provide a local path to your repository for more precise workflow generation."
+            />
+            <FormControlLabel
+              control={<Checkbox checked={wfIncludeComments} onChange={(e) => setWfIncludeComments(e.target.checked)} />}
+              label="Include Comments in Workflow"
+              sx={{ mb: 3 }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleGenerateWorkflow}
+                disabled={!selectedLanguage}
+                fullWidth
+              >
+                Generate Workflow
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleExplainWorkflow}
+                disabled={!workflow}
+                fullWidth
+              >
+                Explain
+              </Button>
+            </Box>
+            {workflow && (
+              <Paper sx={{ p: 4, mt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    GitHub Actions Workflow:
+                  </Typography>
+                  <IconButton onClick={handleCopyWorkflow} size="small">
+                    <ContentCopyIcon />
+                  </IconButton>
+                </Box>
+                <Box
+                  component="pre"
+                  sx={{
+                    p: 2,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    borderRadius: 1,
+                    overflowX: 'auto',
+                    fontFamily: 'monospace',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: '400px',
+                  }}
+                >
+                  {workflow}
+                </Box>
+              </Paper>
+            )}
+            {wfShowExplanation && wfExplanation && (
+              <Paper sx={{ p: 4, mt: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                  Explanation
+                </Typography>
+                <Typography
+                  component="div"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'inherit',
+                    maxHeight: '600px',
+                    overflowY: 'auto',
+                    p: 1,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    borderRadius: '8px',
+                  }}
+                >
+                  {wfExplanation}
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        )}
       </Paper>
-
-      {dockerfile && (
-        <Paper sx={{ p: 4, mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              {`Generated ${selectedLanguage} Dockerfile:`}
-            </Typography>
-            <IconButton onClick={handleCopy} size="small">
-              <ContentCopyIcon />
-            </IconButton>
-          </Box>
-          <Box
-            component="pre"
-            sx={{
-              p: 2,
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              borderRadius: 1,
-              overflowX: 'auto',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              maxHeight: '400px',
-            }}
-          >
-            {dockerfile}
-          </Box>
-        </Paper>
-      )}
-
-      {showExplanation && explanation && (
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-            Explanation
-          </Typography>
-          <Typography
-            component="div"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'inherit',
-              maxHeight: '600px',
-              overflowY: 'auto',
-              p: 1,
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              borderRadius: '8px',
-            }}
-          >
-            {explanation}
-          </Typography>
-        </Paper>
-      )}
 
       <Snackbar
         open={snackbar.open}

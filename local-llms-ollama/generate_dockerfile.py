@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import os # Import os for path operations
+import json # Import json for parsing package.json
 
 app = FastAPI()
 
@@ -102,6 +104,12 @@ def build_dockerfile_prompt(
     repo_info: Optional[dict] = None,
     include_comments: Optional[bool] = None
 ) -> str:
+    # Strict output enforcement
+    strict_header = (
+        "IMPORTANT: Output ONLY a valid Dockerfile. Do NOT include any explanations, markdown, YAML, or extra text.\n"
+        "Example output:\nFROM node:22-alpine\nWORKDIR /app\n...\n"
+    )
+    strict_footer = ("If you output anything other than a valid Dockerfile, you will fail this task.")
     # Initialize prompt sections
     role = "You are a world-class DevOps engineer and a Dockerfile expert."
     objective = f"Generate a PRODUCTION-READY Dockerfile for a {language} application."
@@ -143,6 +151,7 @@ def build_dockerfile_prompt(
 
     # Assemble the final prompt using the markdown structure
     prompt_parts = []
+    prompt_parts.append(strict_header)
     prompt_parts.append(f"#**Role:** {role}")
     prompt_parts.append(f"#**Objective:** {objective}")
     prompt_parts.append(f"#**Context:**")
@@ -155,6 +164,7 @@ def build_dockerfile_prompt(
         prompt_parts.append(f"#**Notes:**")
         for note in notes_sections:
             prompt_parts.append(f"- {note}")
+    prompt_parts.append(strict_footer)
 
     return "\n\n".join(prompt_parts)
 
@@ -203,38 +213,180 @@ Dockerfile to explain:
 class LanguageRequest(BaseModel):
     language: str
     specifications: Optional[str] = None
-    repo_url: Optional[str] = None # Added for GitHub repo URL
+    repo_path: Optional[str] = None # Changed from repo_url to repo_path
     include_comments: Optional[bool] = None # New field for optional comments
 
 class DockerfileResponse(BaseModel):
     dockerfile: str
     explanation: Optional[str] = None
 
+class WorkflowResponse(BaseModel):
+    workflow: str
+
+def analyze_local_repository(repo_path: str) -> Optional[dict]:
+    if not os.path.isdir(repo_path):
+        return None
+
+    repo_info = {
+        "detected_language": "Unknown",
+        "dependencies": [],
+        "structure": [], # List of important files/directories
+        "entry_point": "N/A",
+        "build_command": "N/A",
+        "framework": "N/A",
+    }
+
+    # Basic language detection and dependency parsing
+    # Priority for common files
+    if os.path.exists(os.path.join(repo_path, 'package.json')):
+        repo_info["detected_language"] = "Node.js"
+        repo_info["framework"] = "Node.js/Express/React/Vue"
+        repo_info["structure"].append("package.json")
+        try:
+            with open(os.path.join(repo_path, 'package.json'), 'r') as f:
+                pkg_json = json.load(f)
+                dependencies = []
+                if 'dependencies' in pkg_json:
+                    dependencies.extend([f"{k}@{v}" for k,v in pkg_json['dependencies'].items()])
+                if 'devDependencies' in pkg_json:
+                    dependencies.extend([f"{k}@{v}" for k,v in pkg_json['devDependencies'].items()])
+                repo_info["dependencies"] = dependencies
+                if 'main' in pkg_json:
+                    repo_info["entry_point"] = pkg_json['main']
+                elif 'scripts' in pkg_json and 'start' in pkg_json['scripts']:
+                    repo_info["entry_point"] = pkg_json['scripts']['start']
+        except Exception:
+            pass # Ignore parsing errors for now
+    elif os.path.exists(os.path.join(repo_path, 'requirements.txt')):
+        repo_info["detected_language"] = "Python"
+        repo_info["framework"] = "Python (e.g., Django, Flask, FastAPI)"
+        repo_info["structure"].append("requirements.txt")
+        try:
+            with open(os.path.join(repo_path, 'requirements.txt'), 'r') as f:
+                repo_info["dependencies"] = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception:
+            pass
+    elif any(f.endswith('.py') for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "Python"
+        repo_info["framework"] = "Python"
+    elif os.path.exists(os.path.join(repo_path, 'pom.xml')):
+        repo_info["detected_language"] = "Java"
+        repo_info["framework"] = "Maven"
+        repo_info["structure"].append("pom.xml")
+    elif any(f.endswith('.java') for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "Java"
+        repo_info["framework"] = "Java"
+    elif os.path.exists(os.path.join(repo_path, 'go.mod')):
+        repo_info["detected_language"] = "Go"
+        repo_info["framework"] = "Go Modules"
+        repo_info["structure"].append("go.mod")
+    elif any(f.endswith('.go') for f in os.path.listdir(repo_path)):
+        repo_info["detected_language"] = "Go"
+        repo_info["framework"] = "Go"
+    elif os.path.exists(os.path.join(repo_path, 'Gemfile')):
+        repo_info["detected_language"] = "Ruby"
+        repo_info["framework"] = "Rails/Ruby"
+        repo_info["structure"].append("Gemfile")
+    elif any(f.endswith('.rb') for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "Ruby"
+        repo_info["framework"] = "Ruby"
+    elif os.path.exists(os.path.join(repo_path, 'Cargo.toml')):
+        repo_info["detected_language"] = "Rust"
+        repo_info["framework"] = "Cargo"
+        repo_info["structure"].append("Cargo.toml")
+    elif any(f.endswith('.rs') for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "Rust"
+        repo_info["framework"] = "Rust"
+    elif any(f.endswith(('.cs', '.csproj')) for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "C#"
+        repo_info["framework"] = ".NET"
+    elif any(f.endswith(('.php', 'composer.json')) for f in os.listdir(repo_path)):
+        repo_info["detected_language"] = "PHP"
+        repo_info["framework"] = "PHP"
+    elif any(f.endswith(('.cpp', '.cxx', '.cc', '.h', '.hpp', '.hxx')) for f in os.listdir(repo_path)) or os.path.exists(os.path.join(repo_path, 'CMakeLists.txt')):
+        repo_info["detected_language"] = "C++"
+        repo_info["framework"] = "C++"
+
+    # Add other common files found in the root
+    for filename in ['Dockerfile', 'docker-compose.yml', 'README.md', '.git']:
+        if os.path.exists(os.path.join(repo_path, filename)):
+            repo_info["structure"].append(filename)
+
+    return repo_info
+
 def generate_dockerfile(
     language: str,
     specifications: Optional[str] = None,
-    repo_url: Optional[str] = None,
+    repo_path: Optional[str] = None, # Changed from repo_url
     include_comments: Optional[bool] = None
 ) -> str:
-    # Placeholder for GitHub repo analysis (User to implement)
+    # Analyze local repository if a path is provided
     repo_info = None
-    # if repo_url: 
-    #    repo_info = your_function_to_analyze_github_repo(repo_url)
-    
+    if repo_path:
+        repo_info = analyze_local_repository(repo_path)
+
     prompt = build_dockerfile_prompt(language, specifications, repo_info, include_comments)
-    response = ollama.chat(model='deepseek-r1:1.5b', messages=[{'role': 'user', 'content': prompt}])
+    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
     return response['message']['content']
 
 def generate_explanation(dockerfile: str) -> str:
     # For explanation, we don't need language or specifications as the Dockerfile itself is the source.
     # However, if you want the explanation to be context-aware of the original request, you could pass them.
     # For now, it's strictly about the Dockerfile content.
-    response = ollama.chat(model='deepseek-r1:1.5b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
+    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
     return response['message']['content'].strip() # Ensure no extra whitespace/markdown
+
+GITHUB_ACTIONS_PROMPT_STRUCTURE = """
+IMPORTANT: Output ONLY a valid GitHub Actions workflow YAML file. Do NOT include any explanations, Dockerfile content, or extra text.
+Example output:
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: ...
+...
+If you output anything other than a valid GitHub Actions workflow YAML, you will fail this task.
+
+#**Role:** You are a world-class DevOps engineer and GitHub Actions expert.
+#**Objective:** Generate a PRODUCTION-READY GitHub Actions workflow (.github/workflows/*.yml) for the user's application.
+#**Context:**
+- The workflow should focus on continuous integration (CI) and continuous deployment (CD) best practices.
+- Essential components to include: Triggers (e.g., `push` on `main` branch), Environment Setup, Dependency Installation, Build Steps, Test Steps (if applicable), Docker Image Build and Push to GHCR (if Dockerfile is provided or implied), and any necessary deployment steps.
+- Use GitHub's official actions where possible.
+- Ensure the workflow is secure, efficient, and reliable.
+#**Instructions:**
+##**Instruction 1:** Generate ONLY the complete, executable GitHub Actions workflow YAML content.
+##**Instruction 2:** DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the YAML content itself. Comments *within* the YAML are permitted and encouraged.
+##**Instruction 3:** Ensure the workflow is ready to be directly saved as a `.yml` file and run by GitHub Actions.
+#**Notes:**
+- Consider the detected language, dependencies, and any user specifications.
+- If Docker image build/push is required, assume the Dockerfiles are in the respective frontend/backend directories (e.g., `frontend/Dockerfile`, `backend/Dockerfile`).
+- Use `ghcr.io/${{ github.repository }}/${{ <image_name> }}` for image names.
+- Use `secrets.GITHUB_TOKEN` for authentication to GHCR.
+"""
+
+def generate_github_actions_workflow(
+    language: str,
+    specifications: Optional[str] = None,
+    repo_info: Optional[dict] = None
+) -> str:
+    prompt = GITHUB_ACTIONS_PROMPT_STRUCTURE
+    if language:
+        prompt += f"\nDetected Language: {language}"
+    if specifications:
+        prompt += f"\nUser Specifications: {specifications}"
+    if repo_info:
+        prompt += f"\nRepository Information: {json.dumps(repo_info, indent=2)}"
+
+    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
+    return response['message']['content'].strip()
 
 @app.post("/api/generate", response_model=DockerfileResponse)
 async def generate(request: LanguageRequest):
-    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url, request.include_comments)
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_path, request.include_comments)
     return DockerfileResponse(dockerfile=dockerfile)
 
 @app.post("/api/explain", response_model=DockerfileResponse)
@@ -242,9 +394,14 @@ async def explain(request: LanguageRequest):
     # The explanation prompt only needs the Dockerfile string.
     # The generate_dockerfile function is called here to ensure we have a Dockerfile to explain,
     # which also implies that repo_url and specifications are implicitly used to *generate* that Dockerfile.
-    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_url, request.include_comments)
+    dockerfile = generate_dockerfile(request.language, request.specifications, request.repo_path, request.include_comments) # Pass include_comments
     explanation = generate_explanation(dockerfile)
     return DockerfileResponse(dockerfile=dockerfile, explanation=explanation)
+
+@app.post("/api/generate_workflow", response_model=WorkflowResponse)
+async def generate_workflow_api(request: LanguageRequest):
+    workflow_content = generate_github_actions_workflow(request.language, request.specifications, request.repo_path)
+    return WorkflowResponse(workflow=workflow_content)
 
 if __name__ == '__main__':
     import uvicorn
