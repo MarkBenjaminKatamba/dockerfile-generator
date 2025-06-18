@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 import os # Import os for path operations
 import json # Import json for parsing package.json
+import re
 
 app = FastAPI()
 
@@ -109,6 +110,10 @@ def build_dockerfile_prompt(
         "IMPORTANT: Output ONLY a valid Dockerfile. Do NOT include any explanations, markdown, YAML, or extra text.\n"
         "Example output:\nFROM node:22-alpine\nWORKDIR /app\n...\n"
     )
+    comment_header = (
+        "IMPORTANT: INCLUDE DETAILED COMMENTS FOR EVERY SIGNIFICANT STEP IN THE DOCKERFILE.\n"
+        if include_comments else ""
+    )
     strict_footer = ("If you output anything other than a valid Dockerfile, you will fail this task.")
     # Initialize prompt sections
     role = "You are a world-class DevOps engineer and a Dockerfile expert."
@@ -152,6 +157,8 @@ def build_dockerfile_prompt(
     # Assemble the final prompt using the markdown structure
     prompt_parts = []
     prompt_parts.append(strict_header)
+    if comment_header:
+        prompt_parts.append(comment_header)
     prompt_parts.append(f"#**Role:** {role}")
     prompt_parts.append(f"#**Objective:** {objective}")
     prompt_parts.append(f"#**Context:**")
@@ -314,27 +321,29 @@ def analyze_local_repository(repo_path: str) -> Optional[dict]:
 
     return repo_info
 
+def postprocess_dockerfile_output(output: str) -> str:
+    # Remove anything before the first FROM (case-insensitive)
+    match = re.search(r'(?im)^FROM ', output)
+    if match:
+        return output[match.start():].strip()
+    return output.strip()
+
 def generate_dockerfile(
     language: str,
     specifications: Optional[str] = None,
-    repo_path: Optional[str] = None, # Changed from repo_url
+    repo_path: Optional[str] = None,
     include_comments: Optional[bool] = None
 ) -> str:
-    # Analyze local repository if a path is provided
     repo_info = None
     if repo_path:
         repo_info = analyze_local_repository(repo_path)
-
     prompt = build_dockerfile_prompt(language, specifications, repo_info, include_comments)
     response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
-    return response['message']['content']
+    return postprocess_dockerfile_output(response['message']['content'])
 
 def generate_explanation(dockerfile: str) -> str:
-    # For explanation, we don't need language or specifications as the Dockerfile itself is the source.
-    # However, if you want the explanation to be context-aware of the original request, you could pass them.
-    # For now, it's strictly about the Dockerfile content.
     response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
-    return response['message']['content'].strip() # Ensure no extra whitespace/markdown
+    return response['message']['content'].strip()
 
 GITHUB_ACTIONS_PROMPT_STRUCTURE = """
 IMPORTANT: Output ONLY a valid GitHub Actions workflow YAML file. Do NOT include any explanations, Dockerfile content, or extra text.
@@ -349,40 +358,34 @@ jobs:
       - name: ...
 ...
 If you output anything other than a valid GitHub Actions workflow YAML, you will fail this task.
-
-#**Role:** You are a world-class DevOps engineer and GitHub Actions expert.
-#**Objective:** Generate a PRODUCTION-READY GitHub Actions workflow (.github/workflows/*.yml) for the user's application.
-#**Context:**
-- The workflow should focus on continuous integration (CI) and continuous deployment (CD) best practices.
-- Essential components to include: Triggers (e.g., `push` on `main` branch), Environment Setup, Dependency Installation, Build Steps, Test Steps (if applicable), Docker Image Build and Push to GHCR (if Dockerfile is provided or implied), and any necessary deployment steps.
-- Use GitHub's official actions where possible.
-- Ensure the workflow is secure, efficient, and reliable.
-#**Instructions:**
-##**Instruction 1:** Generate ONLY the complete, executable GitHub Actions workflow YAML content.
-##**Instruction 2:** DO NOT include any introductory or concluding remarks, explanations, or markdown formatting outside of the YAML content itself. Comments *within* the YAML are permitted and encouraged.
-##**Instruction 3:** Ensure the workflow is ready to be directly saved as a `.yml` file and run by GitHub Actions.
-#**Notes:**
-- Consider the detected language, dependencies, and any user specifications.
-- If Docker image build/push is required, assume the Dockerfiles are in the respective frontend/backend directories (e.g., `frontend/Dockerfile`, `backend/Dockerfile`).
-- Use `ghcr.io/${{ github.repository }}/${{ <image_name> }}` for image names.
-- Use `secrets.GITHUB_TOKEN` for authentication to GHCR.
 """
+
+GITHUB_ACTIONS_COMMENT_HEADER = "IMPORTANT: INCLUDE DETAILED COMMENTS FOR EVERY SIGNIFICANT STEP IN THE WORKFLOW YAML.\n"
+
+def postprocess_workflow_output(output: str) -> str:
+    # Remove anything before the first 'name:' (case-insensitive)
+    match = re.search(r'(?im)^name:', output)
+    if match:
+        return output[match.start():].strip()
+    return output.strip()
 
 def generate_github_actions_workflow(
     language: str,
     specifications: Optional[str] = None,
-    repo_info: Optional[dict] = None
+    repo_info: Optional[dict] = None,
+    include_comments: Optional[bool] = None
 ) -> str:
     prompt = GITHUB_ACTIONS_PROMPT_STRUCTURE
+    if include_comments:
+        prompt = GITHUB_ACTIONS_COMMENT_HEADER + prompt
     if language:
         prompt += f"\nDetected Language: {language}"
     if specifications:
         prompt += f"\nUser Specifications: {specifications}"
     if repo_info:
         prompt += f"\nRepository Information: {json.dumps(repo_info, indent=2)}"
-
     response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
-    return response['message']['content'].strip()
+    return postprocess_workflow_output(response['message']['content'])
 
 @app.post("/api/generate", response_model=DockerfileResponse)
 async def generate(request: LanguageRequest):
@@ -400,7 +403,7 @@ async def explain(request: LanguageRequest):
 
 @app.post("/api/generate_workflow", response_model=WorkflowResponse)
 async def generate_workflow_api(request: LanguageRequest):
-    workflow_content = generate_github_actions_workflow(request.language, request.specifications, request.repo_path)
+    workflow_content = generate_github_actions_workflow(request.language, request.specifications, request.repo_path, request.include_comments)
     return WorkflowResponse(workflow=workflow_content)
 
 if __name__ == '__main__':
