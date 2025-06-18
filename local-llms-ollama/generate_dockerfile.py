@@ -338,11 +338,11 @@ def generate_dockerfile(
     if repo_path:
         repo_info = analyze_local_repository(repo_path)
     prompt = build_dockerfile_prompt(language, specifications, repo_info, include_comments)
-    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
+    response = ollama.chat(model='qwen3:4b', messages=[{'role': 'user', 'content': prompt}])
     return postprocess_dockerfile_output(response['message']['content'])
 
 def generate_explanation(dockerfile: str) -> str:
-    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
+    response = ollama.chat(model='qwen3:4b', messages=[{'role': 'user', 'content': EXPLANATION_PROMPT_STRUCTURE.format(dockerfile=dockerfile)}])
     return response['message']['content'].strip()
 
 GITHUB_ACTIONS_PROMPT_STRUCTURE = """
@@ -384,7 +384,7 @@ def generate_github_actions_workflow(
         prompt += f"\nUser Specifications: {specifications}"
     if repo_info:
         prompt += f"\nRepository Information: {json.dumps(repo_info, indent=2)}"
-    response = ollama.chat(model='codellama:7b', messages=[{'role': 'user', 'content': prompt}])
+    response = ollama.chat(model='qwen3:4b', messages=[{'role': 'user', 'content': prompt}])
     return postprocess_workflow_output(response['message']['content'])
 
 @app.post("/api/generate", response_model=DockerfileResponse)
