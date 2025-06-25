@@ -6,11 +6,7 @@ import {
   createTheme,
   useMediaQuery,
   PaletteMode,
-  IconButton,
-  useTheme,
 } from '@mui/material'
-import Brightness4Icon from '@mui/icons-material/Brightness4'
-import Brightness7Icon from '@mui/icons-material/Brightness7'
 import App from './App'
 
 export const ColorModeContext = React.createContext({
