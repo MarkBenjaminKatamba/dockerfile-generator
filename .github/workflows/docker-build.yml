@@ -2,8 +2,6 @@ name: Build and Push Docker Images
 
 on:
   push:
-    # tags:
-    #   - 'v*'
     branches:
       - develop
 
@@ -46,3 +44,24 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: ghcr.io/markbenjaminkatamba/dockerfile-generator-frontend-dev:${{ github.ref_name }} 
+
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: markbenjaminkatamba/homelab-gitops
+          path: homelab-gitops
+          token: ${{ secrets.GITHUB_TOKEN }}          
+
+      - name: Update image tags in homelab-dev overlay
+        run: |
+          sed -i "s|dockerfile-generator-backend-dev:.*|dockerfile-generator-backend-dev:${GITHUB_REF_NAME}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-backend/version.yaml
+          sed -i "s|dockerfile-generator-frontend-dev:.*|dockerfile-generator-frontend-dev:${GITHUB_REF_NAME}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-frontend/version.yaml
+
+      - name: Commit and push changes
+        run: |
+          cd homelab-gitops
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Update dockerfile-generator images to $GITHUB_REF_NAME"
+          git push          
