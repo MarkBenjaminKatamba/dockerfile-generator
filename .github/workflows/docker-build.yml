@@ -50,7 +50,7 @@ jobs:
         with:
           repository: markbenjaminkatamba/homelab-gitops
           path: homelab-gitops
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.HOMELAB_GITOPS_TOKEN }}
           persist-credentials: true          
 
       - name: Update image tags in homelab-dev overlay
