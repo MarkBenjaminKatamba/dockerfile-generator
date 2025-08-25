@@ -125,7 +125,10 @@ def build_dockerfile_prompt(
 
     # Add user-provided specifications
     if specifications and specifications.strip():
-        instructions_sections.append(f"The Dockerfile MUST satisfy these user specifications:\n- {specifications.strip().replace('\n', '\n- ')}")
+        formatted_specs = "- " + specifications.strip().replace("\n", "\n- ")
+        instructions_sections.append(
+            f"The Dockerfile MUST satisfy these user specifications:\n{formatted_specs}"
+        )
         notes_sections.append("User specifications are paramount and must be reflected in the generated Dockerfile.")
 
     # Add GitHub Repository information (CONCEPTUAL - needs backend implementation to populate repo_info)
