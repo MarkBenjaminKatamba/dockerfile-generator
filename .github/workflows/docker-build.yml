@@ -9,7 +9,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -50,7 +50,8 @@ jobs:
         with:
           repository: markbenjaminkatamba/homelab-gitops
           path: homelab-gitops
-          token: ${{ secrets.GITHUB_TOKEN }}          
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true          
 
       - name: Update image tags in homelab-dev overlay
         run: |
