@@ -35,7 +35,9 @@ jobs:
           context: ./local-llms-ollama
           file: ./local-llms-ollama/Dockerfile
           push: true
-          tags: ghcr.io/markbenjaminkatamba/dockerfile-generator-backend-dev:${{ github.ref_name }}
+          tags: |
+            ghcr.io/markbenjaminkatamba/dockerfile-generator-backend-dev:${{ github.ref_name }}
+            ghcr.io/markbenjaminkatamba/dockerfile-generator-backend-dev:${{ github.ref_name }}-${{ github.sha }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -43,7 +45,9 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/markbenjaminkatamba/dockerfile-generator-frontend-dev:${{ github.ref_name }} 
+          tags: |
+            ghcr.io/markbenjaminkatamba/dockerfile-generator-frontend-dev:${{ github.ref_name }}
+            ghcr.io/markbenjaminkatamba/dockerfile-generator-frontend-dev:${{ github.ref_name }}-${{ github.sha }}
 
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
@@ -55,14 +59,18 @@ jobs:
 
       - name: Update image tags in homelab-dev overlay
         run: |
-          sed -i "s|dockerfile-generator-backend-dev:.*|dockerfile-generator-backend-dev:${GITHUB_REF_NAME}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-backend/version.yaml
-          sed -i "s|dockerfile-generator-frontend-dev:.*|dockerfile-generator-frontend-dev:${GITHUB_REF_NAME}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-frontend/version.yaml
+          sed -i "s|dockerfile-generator-backend-dev:.*|dockerfile-generator-backend-dev:${GITHUB_REF_NAME}-${GITHUB_SHA}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-backend/version.yaml
+          sed -i "s|dockerfile-generator-frontend-dev:.*|dockerfile-generator-frontend-dev:${GITHUB_REF_NAME}-${GITHUB_SHA}|" homelab-gitops/apps/overlays/homelab-dev/dockerfile-generator-frontend/version.yaml
 
       - name: Commit and push changes
         run: |
           cd homelab-gitops
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "Update dockerfile-generator images to $GITHUB_REF_NAME"
-          git push          
+          if git status --porcelain | grep .; then
+            git add .
+            git commit -m "Update dockerfile-generator images to ${GITHUB_REF_NAME}-${GITHUB_SHA}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
